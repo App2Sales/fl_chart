@@ -118,6 +118,18 @@ class _LineChartSample2State extends State<LineChartSample2> {
 
   LineChartData mainData() {
     return LineChartData(
+      lineTouchData: LineTouchData(
+        enabled: true,
+        touchTooltipData: LineTouchTooltipData(
+          fitInsideVertically: true,
+          fitInsideHorizontally: true,
+          maxContentWidth: double.infinity,
+          enableIndicator: true,
+          indicatorHeight: 7,
+          tooltipBgColor: Colors.red,
+          showOnTopOfTheChartBoxArea: false,
+        ),
+      ),
       gridData: FlGridData(
         show: true,
         drawVerticalLine: true,

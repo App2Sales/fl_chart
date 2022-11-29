@@ -1619,12 +1619,17 @@ class LineTouchTooltipData with EquatableMixin {
     EdgeInsets? tooltipPadding,
     double? tooltipMargin,
     double? maxContentWidth,
+    double? tooltipHeight,
+    double? tooltipWidth,
     GetLineTooltipItems? getTooltipItems,
     bool? fitInsideHorizontally,
     bool? fitInsideVertically,
     bool? showOnTopOfTheChartBoxArea,
     double? rotateAngle,
     BorderSide? tooltipBorder,
+    bool? enableIndicator,
+    double? indicatorHeight,
+    double? indicatorWidth,
   })  : tooltipBgColor = tooltipBgColor ?? Colors.blueGrey.darken(15),
         tooltipRoundedRadius = tooltipRoundedRadius ?? 4,
         tooltipPadding = tooltipPadding ??
@@ -1637,6 +1642,11 @@ class LineTouchTooltipData with EquatableMixin {
         showOnTopOfTheChartBoxArea = showOnTopOfTheChartBoxArea ?? false,
         rotateAngle = rotateAngle ?? 0.0,
         tooltipBorder = tooltipBorder ?? BorderSide.none,
+        enableBubble = enableIndicator ?? false,
+        indicatorHeight = indicatorHeight ?? 5.5,
+        indicatorWidth = indicatorWidth ?? 6.0,
+        tooltipHeight = tooltipHeight,
+        tooltipWidth = tooltipWidth,
         super();
 
   /// The tooltip background color.
@@ -1671,6 +1681,18 @@ class LineTouchTooltipData with EquatableMixin {
 
   /// The tooltip border color.
   final BorderSide tooltipBorder;
+
+  //// Enables bubble tooltip.
+  final bool enableBubble;
+
+  //// Tooltip indicator height.
+  final double indicatorHeight;
+
+  //// Tooltip indicator width.
+  final double indicatorWidth;
+
+  final double? tooltipHeight;
+  final double? tooltipWidth;
 
   /// Used for equality check, see [EquatableMixin].
   @override

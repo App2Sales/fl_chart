@@ -7,6 +7,7 @@ import 'package:fl_chart/src/chart/base/base_chart/base_chart_painter.dart';
 import 'package:fl_chart/src/extensions/paint_extension.dart';
 import 'package:fl_chart/src/extensions/path_extension.dart';
 import 'package:fl_chart/src/extensions/text_align_extension.dart';
+import 'package:fl_chart/src/utils/bubble_custom_painter.dart';
 import 'package:fl_chart/src/utils/canvas_wrapper.dart';
 import 'package:fl_chart/src/utils/utils.dart';
 import 'package:flutter/material.dart';
@@ -1182,8 +1183,14 @@ class LineChartPainter extends AxisChartPainter<LineChartData> {
       getPixelY(showOnSpot.y, viewSize, holder),
     );
 
-    final tooltipWidth = biggerWidth + tooltipData.tooltipPadding.horizontal;
-    final tooltipHeight = sumTextsHeight + tooltipData.tooltipPadding.vertical;
+    final tooltipWidth = tooltipData.tooltipWidth ??
+        biggerWidth + tooltipData.tooltipPadding.horizontal;
+        
+    final tooltipHeight = tooltipData.tooltipHeight ??
+        sumTextsHeight +
+            tooltipData.tooltipPadding.top +
+            tooltipData.tooltipPadding.bottom +
+            (tooltipData.enableBubble ? 8.0 : 0.0);
 
     double tooltipTopPosition;
     if (tooltipData.showOnTopOfTheChartBoxArea) {
@@ -1275,9 +1282,33 @@ class LineChartPainter extends AxisChartPainter<LineChartData> {
       drawOffset: rectDrawOffset,
       angle: rotateAngle,
       drawCallback: () {
-        canvasWrapper
-          ..drawRRect(roundedRect, _bgTouchTooltipPaint)
-          ..drawRRect(roundedRect, _borderTouchTooltipPaint);
+        final arrowPositionPercent = tooltipData.fitInsideHorizontally
+          ? mostTopOffset.dx / viewSize.width
+          : 0.5;
+        
+        if (tooltipData.enableBubble) {
+          final bubblePath = BubbleCustomPainter(
+            arrowHeight: tooltipData.indicatorHeight,
+            arrowWidth: tooltipData.indicatorWidth,
+            borderRadius: tooltipData.tooltipRoundedRadius,
+            arrowPositionPercent: arrowPositionPercent,
+            parentForcedSize: tooltipData.fitInsideHorizontally
+              ? viewSize
+              : null,
+          ).generatePath(rect: rect);
+
+          if(arrowPositionPercent == 0.0 || arrowPositionPercent == 1.0) {
+            canvasWrapper.clipRect(Rect.fromLTRB(rect.left, rect.top, rect.right, rect.bottom));
+          }
+
+          canvasWrapper
+            ..drawPath(bubblePath, _bgTouchTooltipPaint)
+            ..drawPath(bubblePath, _borderTouchTooltipPaint);
+        } else {
+          canvasWrapper
+            ..drawRRect(roundedRect, _bgTouchTooltipPaint)
+            ..drawRRect(roundedRect, _borderTouchTooltipPaint);
+        }
       },
     );
 
