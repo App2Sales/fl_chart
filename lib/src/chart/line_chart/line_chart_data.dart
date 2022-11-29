@@ -1564,6 +1564,12 @@ double _xDistance(Offset touchPoint, Offset spotPixelCoordinates) {
 List<TouchedSpotIndicatorData> defaultTouchedIndicators(
   LineChartBarData barData,
   List<int> indicators,
+  {
+    Color? indicatorColor,
+    double? indicatorStrokeWidth,
+    double? indicatorDotSize,
+    double? indicatorDotShowingSize,
+  }
 ) {
   return indicators.map((int index) {
     /// Indicator Line
@@ -1572,11 +1578,14 @@ List<TouchedSpotIndicatorData> defaultTouchedIndicators(
       lineColor = _defaultGetDotColor(barData.spots[index], 0, barData);
     }
     const lineStrokeWidth = 4.0;
-    final flLine = FlLine(color: lineColor, strokeWidth: lineStrokeWidth);
+    final flLine = FlLine(
+      color: indicatorColor ?? lineColor,
+      strokeWidth: indicatorStrokeWidth ?? lineStrokeWidth,
+    );
 
-    var dotSize = 10.0;
+    var dotSize = indicatorDotSize ?? 10.0;
     if (barData.dotData.show) {
-      dotSize = 4.0 * 1.8;
+      dotSize = indicatorDotShowingSize ?? 4.0 * 1.8;
     }
 
     final dotData = FlDotData(
