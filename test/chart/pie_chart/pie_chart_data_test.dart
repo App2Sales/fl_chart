@@ -73,7 +73,7 @@ void main() {
                 PieChartSectionData(value: 22, color: Colors.green),
               ],
             ),
-        false,
+        true,
       );
 
       expect(
@@ -132,6 +132,14 @@ void main() {
             ),
         false,
       );
+
+      expect(
+        pieChartData1 ==
+            pieChartData1Clone.copyWith(
+              titleSunbeamLayout: true,
+            ),
+        false,
+      );
     });
 
     test('PieTouchData equality test', () {
@@ -149,6 +157,12 @@ void main() {
         enabled: false,
       );
       expect(sample1 == disabled, false);
+
+      final zeroLongPressDuration = PieTouchData(
+        enabled: true,
+        longPressDuration: Duration.zero,
+      );
+      expect(sample1 == zeroLongPressDuration, false);
     });
   });
 }

@@ -1,5 +1,10 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:fl_chart/src/chart/base/axis_chart/axis_chart_scaffold_widget.dart';
+import 'package:fl_chart/src/chart/base/axis_chart/scale_axis.dart';
+import 'package:fl_chart/src/chart/base/axis_chart/transformation_config.dart';
+import 'package:fl_chart/src/chart/base/base_chart/base_chart_data.dart';
+import 'package:fl_chart/src/chart/base/base_chart/fl_touch_event.dart';
+import 'package:fl_chart/src/chart/line_chart/line_chart_data.dart';
+import 'package:fl_chart/src/chart/line_chart/line_chart_helper.dart';
 import 'package:fl_chart/src/chart/line_chart/line_chart_renderer.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -8,22 +13,23 @@ import 'package:flutter/material.dart';
 class LineChart extends ImplicitlyAnimatedWidget {
   /// [data] determines how the [LineChart] should be look like,
   /// when you make any change in the [LineChartData], it updates
-  /// new values with animation, and duration is [swapAnimationDuration].
-  /// also you can change the [swapAnimationCurve]
+  /// new values with animation, and duration is [duration].
+  /// also you can change the [curve]
   /// which default is [Curves.linear].
   const LineChart(
     this.data, {
     this.chartRendererKey,
     super.key,
-    Duration swapAnimationDuration = const Duration(milliseconds: 150),
-    Curve swapAnimationCurve = Curves.linear,
-  }) : super(
-          duration: swapAnimationDuration,
-          curve: swapAnimationCurve,
-        );
+    super.duration = const Duration(milliseconds: 150),
+    super.curve = Curves.linear,
+    this.transformationConfig = const FlTransformationConfig(),
+  });
 
   /// Determines how the [LineChart] should be look like.
   final LineChartData data;
+
+  /// {@macro fl_chart.AxisChartScaffoldWidget.transformationConfig}
+  final FlTransformationConfig transformationConfig;
 
   /// We pass this key to our renderers which are supposed to
   /// render the chart itself (without anything around the chart).
@@ -47,15 +53,22 @@ class _LineChartState extends AnimatedWidgetBaseState<LineChart> {
 
   final Map<int, List<int>> _showingTouchedIndicators = {};
 
+  final _lineChartHelper = LineChartHelper();
+
   @override
   Widget build(BuildContext context) {
     final showingData = _getData();
 
     return AxisChartScaffoldWidget(
-      chart: LineChartLeaf(
-        data: _withTouchedIndicators(_lineChartDataTween!.evaluate(animation)),
+      transformationConfig: widget.transformationConfig,
+      chartBuilder: (context, chartVirtualRect) => LineChartLeaf(
+        data: _withTouchedIndicators(
+          _lineChartDataTween!.evaluate(animation),
+        ),
         targetData: _withTouchedIndicators(showingData),
         key: widget.chartRendererKey,
+        chartVirtualRect: chartVirtualRect,
+        canBeScaled: widget.transformationConfig.scaleAxis != FlScaleAxis.none,
       ),
       data: showingData,
     );
@@ -79,21 +92,44 @@ class _LineChartState extends AnimatedWidgetBaseState<LineChart> {
   }
 
   LineChartData _getData() {
-    final lineTouchData = widget.data.lineTouchData;
-    if (lineTouchData.enabled && lineTouchData.handleBuiltInTouches) {
-      _providedTouchCallback = lineTouchData.touchCallback;
-      return widget.data.copyWith(
-        lineTouchData: widget.data.lineTouchData
-            .copyWith(touchCallback: _handleBuiltInTouch),
+    var newData = widget.data;
+
+    /// Calculate minX, maxX, minY, maxY for [LineChartData] if they are null,
+    /// it is necessary to render the chart correctly.
+    if (newData.minX.isNaN ||
+        newData.maxX.isNaN ||
+        newData.minY.isNaN ||
+        newData.maxY.isNaN) {
+      final (minX, maxX, minY, maxY) = _lineChartHelper.calculateMaxAxisValues(
+        newData.lineBarsData,
+      );
+      newData = newData.copyWith(
+        minX: newData.minX.isNaN ? minX : newData.minX,
+        maxX: newData.maxX.isNaN ? maxX : newData.maxX,
+        minY: newData.minY.isNaN ? minY : newData.minY,
+        maxY: newData.maxY.isNaN ? maxY : newData.maxY,
       );
     }
-    return widget.data;
+
+    final lineTouchData = newData.lineTouchData;
+    if (lineTouchData.enabled && lineTouchData.handleBuiltInTouches) {
+      _providedTouchCallback = lineTouchData.touchCallback;
+      newData = newData.copyWith(
+        lineTouchData:
+            newData.lineTouchData.copyWith(touchCallback: _handleBuiltInTouch),
+      );
+    }
+
+    return newData;
   }
 
   void _handleBuiltInTouch(
     FlTouchEvent event,
     LineTouchResponse? touchResponse,
   ) {
+    if (!mounted) {
+      return;
+    }
     _providedTouchCallback?.call(event, touchResponse);
 
     if (!event.isInterestedForInteractions ||

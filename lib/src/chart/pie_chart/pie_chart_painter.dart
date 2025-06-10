@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:fl_chart/src/chart/base/base_chart/base_chart_painter.dart';
 import 'package:fl_chart/src/chart/base/line.dart';
 import 'package:fl_chart/src/chart/pie_chart/pie_chart_data.dart';
+import 'package:fl_chart/src/extensions/paint_extension.dart';
 import 'package:fl_chart/src/utils/canvas_wrapper.dart';
 import 'package:fl_chart/src/utils/utils.dart';
 import 'package:flutter/material.dart';
@@ -21,13 +22,20 @@ class PieChartPainter extends BaseChartPainter<PieChartData> {
   PieChartPainter() : super() {
     _sectionPaint = Paint()..style = PaintingStyle.stroke;
 
+    _sectionSaveLayerPaint = Paint();
+
     _sectionStrokePaint = Paint()..style = PaintingStyle.stroke;
 
     _centerSpacePaint = Paint()..style = PaintingStyle.fill;
+
+    _clipPaint = Paint();
   }
+
   late Paint _sectionPaint;
+  late Paint _sectionSaveLayerPaint;
   late Paint _sectionStrokePaint;
   late Paint _centerSpacePaint;
+  late Paint _clipPaint;
 
   /// Paints [PieChartData] into the provided canvas.
   @override
@@ -55,6 +63,10 @@ class PieChartPainter extends BaseChartPainter<PieChartData> {
     List<PieChartSectionData> sections,
     double sumValue,
   ) {
+    if (sumValue == 0) {
+      return List<double>.filled(sections.length, 0);
+    }
+
     return sections.map((section) {
       return 360 * (section.value / sumValue);
     }).toList();
@@ -95,20 +107,43 @@ class PieChartPainter extends BaseChartPainter<PieChartData> {
 
     for (var i = 0; i < data.sections.length; i++) {
       final section = data.sections[i];
+      if (section.value == 0) {
+        continue;
+      }
       final sectionDegree = sectionsAngle[i];
 
       if (sectionDegree == 360) {
+        final radius = centerRadius + section.radius / 2;
+        final rect = Rect.fromCircle(center: center, radius: radius);
         _sectionPaint
-          ..color = section.color
+          ..setColorOrGradient(
+            section.color,
+            section.gradient,
+            rect,
+          )
           ..strokeWidth = section.radius
-          ..style = PaintingStyle.stroke;
-        canvasWrapper.drawCircle(
-          center,
-          centerRadius + section.radius / 2,
-          _sectionPaint,
+          ..style = PaintingStyle.fill;
+
+        final bounds = Rect.fromCircle(
+          center: center,
+          radius: centerRadius + section.radius,
         );
+        canvasWrapper
+          ..saveLayer(bounds, _sectionSaveLayerPaint)
+          ..drawCircle(
+            center,
+            centerRadius + section.radius,
+            _sectionPaint..blendMode = BlendMode.srcOver,
+          )
+          ..drawCircle(
+            center,
+            centerRadius,
+            _sectionPaint..blendMode = BlendMode.srcOut,
+          )
+          ..restore();
+        _sectionPaint.blendMode = BlendMode.srcOver;
         if (section.borderSide.width != 0.0 &&
-            section.borderSide.color.opacity != 0.0) {
+            section.borderSide.color.alpha != 0.0) {
           _sectionStrokePaint
             ..strokeWidth = section.borderSide.width
             ..color = section.borderSide.color;
@@ -197,19 +232,29 @@ class PieChartPainter extends BaseChartPainter<PieChartData> {
         Line(startLineFrom, startLineTo),
         sectionSpace,
       );
-      sectionPath = Path.combine(
-        PathOperation.difference,
-        sectionPath,
-        startLineSeparatorPath,
-      );
+      try {
+        sectionPath = Path.combine(
+          PathOperation.difference,
+          sectionPath,
+          startLineSeparatorPath,
+        );
+      } catch (_) {
+        /// It's a flutter engine issue with [Path.combine] in web-html renderer
+        /// https://github.com/imaNNeo/fl_chart/issues/955
+      }
 
       final endLineSeparatorPath =
           createRectPathAroundLine(Line(endLineFrom, endLineTo), sectionSpace);
-      sectionPath = Path.combine(
-        PathOperation.difference,
-        sectionPath,
-        endLineSeparatorPath,
-      );
+      try {
+        sectionPath = Path.combine(
+          PathOperation.difference,
+          sectionPath,
+          endLineSeparatorPath,
+        );
+      } catch (_) {
+        /// It's a flutter engine issue with [Path.combine] in web-html renderer
+        /// https://github.com/imaNNeo/fl_chart/issues/955
+      }
     }
 
     return sectionPath;
@@ -268,7 +313,11 @@ class PieChartPainter extends BaseChartPainter<PieChartData> {
     CanvasWrapper canvasWrapper,
   ) {
     _sectionPaint
-      ..color = section.color
+      ..setColorOrGradient(
+        section.color,
+        section.gradient,
+        sectionPath.getBounds(),
+      )
       ..style = PaintingStyle.fill;
     canvasWrapper.drawPath(sectionPath, _sectionPaint);
   }
@@ -280,12 +329,11 @@ class PieChartPainter extends BaseChartPainter<PieChartData> {
     CanvasWrapper canvasWrapper,
     Size viewSize,
   ) {
-    if (section.borderSide.width != 0.0 &&
-        section.borderSide.color.opacity != 0.0) {
+    if (section.borderSide.width != 0.0 && section.borderSide.color.alpha != 0.0) {
       canvasWrapper
         ..saveLayer(
           Rect.fromLTWH(0, 0, viewSize.width, viewSize.height),
-          Paint(),
+          _clipPaint,
         )
         ..clipPath(sectionPath);
 
@@ -319,9 +367,21 @@ class PieChartPainter extends BaseChartPainter<PieChartData> {
 
     for (var i = 0; i < data.sections.length; i++) {
       final section = data.sections[i];
+      if (section.value == 0) {
+        continue;
+      }
       final startAngle = tempAngle;
       final sweepAngle = 360 * (section.value / data.sumValue);
       final sectionCenterAngle = startAngle + (sweepAngle / 2);
+
+      double? rotateAngle;
+      if (data.titleSunbeamLayout) {
+        if (sectionCenterAngle >= 90 && sectionCenterAngle <= 270) {
+          rotateAngle = sectionCenterAngle - 180;
+        } else {
+          rotateAngle = sectionCenterAngle;
+        }
+      }
 
       Offset sectionCenter(double percentageOffset) =>
           center +
@@ -344,12 +404,13 @@ class PieChartPainter extends BaseChartPainter<PieChartData> {
           text: span,
           textAlign: TextAlign.center,
           textDirection: TextDirection.ltr,
-          textScaleFactor: holder.textScale,
+          textScaler: holder.textScaler,
         )..layout();
 
         canvasWrapper.drawText(
           tp,
           sectionCenterOffsetTitle - Offset(tp.width / 2, tp.height / 2),
+          rotateAngle,
         );
       }
 
@@ -384,6 +445,7 @@ class PieChartPainter extends BaseChartPainter<PieChartData> {
   ) {
     final data = holder.data;
     final sectionsAngle = calculateSectionsAngle(data.sections, data.sumValue);
+    final centerRadius = calculateCenterRadius(viewSize, holder);
 
     final center = Offset(viewSize.width / 2, viewSize.height / 2);
 
@@ -399,33 +461,34 @@ class PieChartPainter extends BaseChartPainter<PieChartData> {
     PieChartSectionData? foundSectionData;
     var foundSectionDataPosition = -1;
 
-    /// Find the nearest section base on the touch spot
-    final relativeTouchAngle = (touchAngle - data.startDegreeOffset) % 360;
-    var tempAngle = 0.0;
+    var tempAngle = data.startDegreeOffset;
     for (var i = 0; i < data.sections.length; i++) {
       final section = data.sections[i];
-      var sectionAngle = sectionsAngle[i];
+      final sectionAngle = sectionsAngle[i];
 
-      tempAngle %= 360;
-      if (data.sections.length == 1) {
-        sectionAngle = 360;
-      } else {
-        sectionAngle %= 360;
+      if (sectionAngle == 360) {
+        final distance = math.sqrt(
+          math.pow(localPosition.dx - center.dx, 2) +
+              math.pow(localPosition.dy - center.dy, 2),
+        );
+        if (distance >= centerRadius &&
+            distance <= section.radius + centerRadius) {
+          foundSectionData = section;
+          foundSectionDataPosition = i;
+        }
+        break;
       }
 
-      /// degree criteria
-      final space = data.sectionsSpace / 2;
-      final fromDegree = tempAngle + space;
-      final toDegree = sectionAngle + tempAngle - space;
-      final isInDegree =
-          relativeTouchAngle >= fromDegree && relativeTouchAngle <= toDegree;
+      final sectionPath = generateSectionPath(
+        section,
+        data.sectionsSpace,
+        tempAngle,
+        sectionAngle,
+        center,
+        centerRadius,
+      );
 
-      /// radius criteria
-      final centerRadius = calculateCenterRadius(viewSize, holder);
-      final sectionRadius = centerRadius + section.radius;
-      final isInRadius = touchR > centerRadius && touchR <= sectionRadius;
-
-      if (isInDegree && isInRadius) {
+      if (sectionPath.contains(localPosition)) {
         foundSectionData = section;
         foundSectionDataPosition = i;
         break;

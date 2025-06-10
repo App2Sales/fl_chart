@@ -45,17 +45,31 @@ void main() {
                   0,
                   0,
                   show: false,
-                  radius: 33,
-                  color: Colors.yellow,
+                  dotPainter: FlDotCirclePainter(
+                    radius: 33,
+                    color: Colors.yellow,
+                  ),
                 ),
                 ScatterSpot(
                   2,
                   2,
                   show: false,
-                  radius: 11,
-                  color: Colors.purple,
+                  renderPriority: 10,
+                  dotPainter: FlDotCirclePainter(
+                    radius: 11,
+                    color: Colors.purple,
+                  ),
                 ),
-                ScatterSpot(1, 2, show: false, radius: 11, color: Colors.white),
+                ScatterSpot(
+                  1,
+                  2,
+                  show: false,
+                  renderPriority: -1,
+                  dotPainter: FlDotCirclePainter(
+                    radius: 11,
+                    color: Colors.white,
+                  ),
+                ),
               ],
             ),
         true,
@@ -68,36 +82,50 @@ void main() {
                   2,
                   2,
                   show: false,
-                  radius: 11,
-                  color: Colors.purple,
+                  renderPriority: 10,
+                  dotPainter: FlDotCirclePainter(
+                    radius: 11,
+                    color: Colors.purple,
+                  ),
                 ),
                 ScatterSpot(
                   0,
                   0,
                   show: false,
-                  radius: 33,
-                  color: Colors.yellow,
+                  renderPriority: 0,
+                  dotPainter: FlDotCirclePainter(
+                    radius: 33,
+                    color: Colors.yellow,
+                  ),
                 ),
-                ScatterSpot(1, 2, show: false, radius: 11, color: Colors.white),
+                ScatterSpot(
+                  1,
+                  2,
+                  show: false,
+                  renderPriority: -1,
+                  dotPainter: FlDotCirclePainter(
+                    radius: 11,
+                    color: Colors.white,
+                  ),
+                ),
               ],
             ),
         false,
       );
       expect(
         scatterChartData1 ==
-            scatterChartData1Clone.copyWith(clipData: FlClipData.all()),
+            scatterChartData1Clone.copyWith(clipData: const FlClipData.all()),
         false,
       );
       expect(
         scatterChartData1 ==
             scatterChartData1Clone.copyWith(
-              gridData: FlGridData(
+              gridData: const FlGridData(
                 show: false,
                 getDrawingHorizontalLine: gridGetDrawingLine,
                 getDrawingVerticalLine: gridGetDrawingLine,
                 checkToShowHorizontalLine: gridCheckToShowLine,
                 checkToShowVerticalLine: gridCheckToShowLine,
-                drawHorizontalLine: true,
                 drawVerticalLine: false,
                 horizontalInterval: 33,
                 verticalInterval: 1,
@@ -108,13 +136,11 @@ void main() {
       expect(
         scatterChartData1 ==
             scatterChartData1Clone.copyWith(
-              gridData: FlGridData(
-                show: true,
+              gridData: const FlGridData(
                 getDrawingHorizontalLine: gridGetDrawingLine,
                 getDrawingVerticalLine: gridGetDrawingLine,
                 checkToShowHorizontalLine: gridCheckToShowLine,
                 checkToShowVerticalLine: gridCheckToShowLine,
-                drawHorizontalLine: true,
                 drawVerticalLine: false,
                 horizontalInterval: 33,
                 verticalInterval: 1,
@@ -127,19 +153,18 @@ void main() {
             scatterChartData1Clone.copyWith(
               gridData: FlGridData(
                 show: false,
-                getDrawingHorizontalLine: (value) => FlLine(
+                getDrawingHorizontalLine: (value) => const FlLine(
                   color: Colors.green,
                   strokeWidth: 12,
                   dashArray: [1, 2],
                 ),
-                getDrawingVerticalLine: (value) => FlLine(
+                getDrawingVerticalLine: (value) => const FlLine(
                   color: Colors.yellow,
                   strokeWidth: 33,
                   dashArray: [0, 1],
                 ),
                 checkToShowHorizontalLine: (value) => false,
                 checkToShowVerticalLine: (value) => true,
-                drawHorizontalLine: true,
                 drawVerticalLine: false,
                 horizontalInterval: 32,
                 verticalInterval: 1,
@@ -150,12 +175,10 @@ void main() {
       expect(
         scatterChartData1 ==
             scatterChartData1Clone.copyWith(
-              titlesData: FlTitlesData(
-                show: true,
+              titlesData: const FlTitlesData(
                 leftTitles: AxisTitles(
                   axisNameSize: 33,
                   axisNameWidget: MockData.widget1,
-                  sideTitles: SideTitles(showTitles: false),
                 ),
                 rightTitles: AxisTitles(
                   axisNameSize: 1326,
@@ -165,12 +188,10 @@ void main() {
                 topTitles: AxisTitles(
                   axisNameSize: 34,
                   axisNameWidget: MockData.widget4,
-                  sideTitles: SideTitles(showTitles: false),
                 ),
                 bottomTitles: AxisTitles(
                   axisNameSize: 22,
                   axisNameWidget: MockData.widget2,
-                  sideTitles: SideTitles(showTitles: false),
                 ),
               ),
             ),
@@ -179,27 +200,23 @@ void main() {
       expect(
         scatterChartData1 ==
             scatterChartData1Clone.copyWith(
-              titlesData: FlTitlesData(
-                show: true,
+              titlesData: const FlTitlesData(
                 leftTitles: AxisTitles(
                   axisNameSize: 332,
-                  axisNameWidget: const Text('title 1'),
-                  sideTitles: SideTitles(showTitles: false),
+                  axisNameWidget: Text('title 1'),
                 ),
                 rightTitles: AxisTitles(
                   axisNameSize: 1326,
-                  axisNameWidget: const Text('title 3'),
+                  axisNameWidget: Text('title 3'),
                   sideTitles: SideTitles(reservedSize: 500, showTitles: true),
                 ),
                 topTitles: AxisTitles(
                   axisNameSize: 34,
-                  axisNameWidget: const Text('title 4'),
-                  sideTitles: SideTitles(showTitles: false),
+                  axisNameWidget: Text('title 4'),
                 ),
                 bottomTitles: AxisTitles(
                   axisNameSize: 22,
-                  axisNameWidget: const Text('title 2'),
-                  sideTitles: SideTitles(showTitles: false),
+                  axisNameWidget: Text('title 2'),
                 ),
               ),
             ),
@@ -208,26 +225,23 @@ void main() {
       expect(
         scatterChartData1 ==
             scatterChartData1Clone.copyWith(
-              titlesData: FlTitlesData(
-                show: true,
+              titlesData: const FlTitlesData(
                 leftTitles: AxisTitles(
                   axisNameSize: 33,
-                  axisNameWidget: const Text('title 1'),
-                  sideTitles: SideTitles(showTitles: false),
+                  axisNameWidget: Text('title 1'),
                 ),
                 rightTitles: AxisTitles(
                   axisNameSize: 1326,
-                  axisNameWidget: const Text('title 3'),
+                  axisNameWidget: Text('title 3'),
                   sideTitles: SideTitles(reservedSize: 500, showTitles: true),
                 ),
                 topTitles: AxisTitles(
                   axisNameSize: 34,
-                  axisNameWidget: const Text('title 4'),
-                  sideTitles: SideTitles(showTitles: false),
+                  axisNameWidget: Text('title 4'),
                 ),
                 bottomTitles: AxisTitles(
                   axisNameSize: 22,
-                  axisNameWidget: const Text('title 2'),
+                  axisNameWidget: Text('title 2'),
                   sideTitles: SideTitles(showTitles: true),
                 ),
               ),
@@ -237,27 +251,23 @@ void main() {
       expect(
         scatterChartData1 ==
             scatterChartData1Clone.copyWith(
-              titlesData: FlTitlesData(
-                show: true,
+              titlesData: const FlTitlesData(
                 leftTitles: AxisTitles(
                   axisNameSize: 33,
-                  axisNameWidget: const Text('title 1'),
-                  sideTitles: SideTitles(showTitles: false),
+                  axisNameWidget: Text('title 1'),
                 ),
                 rightTitles: AxisTitles(
                   axisNameSize: 1326,
-                  axisNameWidget: const Text('title 1'),
+                  axisNameWidget: Text('title 1'),
                   sideTitles: SideTitles(reservedSize: 500, showTitles: true),
                 ),
                 topTitles: AxisTitles(
                   axisNameSize: 34,
-                  axisNameWidget: const Text('title 4'),
-                  sideTitles: SideTitles(showTitles: false),
+                  axisNameWidget: Text('title 4'),
                 ),
                 bottomTitles: AxisTitles(
                   axisNameSize: 22,
-                  axisNameWidget: const Text('title 2'),
-                  sideTitles: SideTitles(showTitles: false),
+                  axisNameWidget: Text('title 2'),
                 ),
               ),
             ),
@@ -266,27 +276,23 @@ void main() {
       expect(
         scatterChartData1 ==
             scatterChartData1Clone.copyWith(
-              titlesData: FlTitlesData(
-                show: true,
+              titlesData: const FlTitlesData(
                 leftTitles: AxisTitles(
                   axisNameSize: 33,
-                  axisNameWidget: const Text('title 1'),
-                  sideTitles: SideTitles(showTitles: false),
+                  axisNameWidget: Text('title 1'),
                 ),
                 rightTitles: AxisTitles(
                   axisNameSize: 13262,
-                  axisNameWidget: const Text('title 3'),
+                  axisNameWidget: Text('title 3'),
                   sideTitles: SideTitles(reservedSize: 500, showTitles: true),
                 ),
                 topTitles: AxisTitles(
                   axisNameSize: 34,
-                  axisNameWidget: const Text('title 4'),
-                  sideTitles: SideTitles(showTitles: false),
+                  axisNameWidget: Text('title 4'),
                 ),
                 bottomTitles: AxisTitles(
                   axisNameSize: 22,
-                  axisNameWidget: const Text('title 2'),
-                  sideTitles: SideTitles(showTitles: false),
+                  axisNameWidget: Text('title 2'),
                 ),
               ),
             ),
@@ -383,20 +389,20 @@ void main() {
 
     test('ScatterTouchData equality test', () {
       final sample = ScatterTouchData(
-        touchTooltipData: ScatterTouchTooltipData(
+        touchTooltipData: const ScatterTouchTooltipData(
           maxContentWidth: 2,
-          tooltipBgColor: Colors.red,
-          tooltipPadding: const EdgeInsets.all(11),
+          getTooltipColor: scatterChartGetTooltipRedColor,
+          tooltipPadding: EdgeInsets.all(11),
         ),
         handleBuiltInTouches: false,
         touchSpotThreshold: 23,
         enabled: false,
       );
       final sampleClone = ScatterTouchData(
-        touchTooltipData: ScatterTouchTooltipData(
+        touchTooltipData: const ScatterTouchTooltipData(
           maxContentWidth: 2,
-          tooltipBgColor: Colors.red,
-          tooltipPadding: const EdgeInsets.all(11),
+          getTooltipColor: scatterChartGetTooltipRedColor,
+          tooltipPadding: EdgeInsets.all(11),
         ),
         handleBuiltInTouches: false,
         touchSpotThreshold: 23,
@@ -429,6 +435,13 @@ void main() {
         sample ==
             sampleClone.copyWith(
               handleBuiltInTouches: true,
+            ),
+        false,
+      );
+      expect(
+        sample ==
+            sampleClone.copyWith(
+              longPressDuration: Duration.zero,
             ),
         false,
       );

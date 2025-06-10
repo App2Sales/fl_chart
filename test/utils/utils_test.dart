@@ -3,7 +3,6 @@ import 'package:fl_chart/src/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
-import 'package:mockito/mockito.dart';
 
 import '../chart/data_pool.dart';
 import 'utils_test.mocks.dart';
@@ -35,40 +34,6 @@ void main() {
     expect(Utils().degrees(1.5), closeTo(85.9437, tolerance));
     expect(Utils().degrees(1.8), closeTo(103.132, tolerance));
     expect(Utils().degrees(1.2), closeTo(68.7549, tolerance));
-  });
-
-  test('test default size', () {
-    expect(
-      Utils().getDefaultSize(const Size(1080, 1920)).width,
-      closeTo(756, tolerance),
-    );
-    expect(
-      Utils().getDefaultSize(const Size(1080, 1920)).height,
-      closeTo(756, tolerance),
-    );
-
-    expect(
-      Utils().getDefaultSize(const Size(728, 1080)).width,
-      closeTo(509.6, tolerance),
-    );
-    expect(
-      Utils().getDefaultSize(const Size(728, 1080)).height,
-      closeTo(509.6, tolerance),
-    );
-
-    expect(
-      Utils().getDefaultSize(const Size(2560, 1600)).width,
-      closeTo(1120, tolerance),
-    );
-    expect(
-      Utils().getDefaultSize(const Size(2560, 1600)).height,
-      closeTo(1120, tolerance),
-    );
-
-    expect(
-      Utils().getDefaultSize(const Size(1000, 1000)).width,
-      closeTo(700, tolerance),
-    );
   });
 
   test('translate rotated position', () {
@@ -221,77 +186,95 @@ void main() {
     expect(Utils().getEfficientInterval(10, 0), 1);
   });
 
+  test('test getFractionDigits', () {
+    expect(Utils().getFractionDigits(1), 1);
+    expect(Utils().getFractionDigits(343), 1);
+    expect(Utils().getFractionDigits(22), 1);
+    expect(Utils().getFractionDigits(444444), 1);
+    expect(Utils().getFractionDigits(0.9), 2);
+    expect(Utils().getFractionDigits(0.1), 2);
+    expect(Utils().getFractionDigits(0.01), 3);
+    expect(Utils().getFractionDigits(0.001), 4);
+    expect(Utils().getFractionDigits(0.009), 4);
+    expect(Utils().getFractionDigits(0.008), 4);
+    expect(Utils().getFractionDigits(0.0001), 5);
+    expect(Utils().getFractionDigits(0.0009), 5);
+    expect(Utils().getFractionDigits(0.00001), 6);
+    expect(Utils().getFractionDigits(0.000001), 7);
+    expect(Utils().getFractionDigits(0.0000001), 8);
+    expect(Utils().getFractionDigits(0.00000001), 9);
+  });
+
   test('test formatNumber', () {
-    expect(Utils().formatNumber(0), '0');
-    expect(Utils().formatNumber(423), '423');
-    expect(Utils().formatNumber(-423), '-423');
-    expect(Utils().formatNumber(1000), '1K');
-    expect(Utils().formatNumber(1234), '1.2K');
-    expect(Utils().formatNumber(10000), '10K');
-    expect(Utils().formatNumber(41234), '41.2K');
-    expect(Utils().formatNumber(82349), '82.3K');
-    expect(Utils().formatNumber(82350), '82.3K');
-    expect(Utils().formatNumber(82351), '82.4K');
-    expect(Utils().formatNumber(-82351), '-82.4K');
-    expect(Utils().formatNumber(100000), '100K');
-    expect(Utils().formatNumber(101000), '101K');
-    expect(Utils().formatNumber(2345123), '2.3M');
-    expect(Utils().formatNumber(2352123), '2.4M');
-    expect(Utils().formatNumber(-2352123), '-2.4M');
-    expect(Utils().formatNumber(521000000), '521M');
-    expect(Utils().formatNumber(4324512345), '4.3B');
-    expect(Utils().formatNumber(4000000000), '4B');
-    expect(Utils().formatNumber(-4000000000), '-4B');
-    expect(Utils().formatNumber(823147521343), '823.1B');
-    expect(Utils().formatNumber(8231475213435), '8231.5B');
-    expect(Utils().formatNumber(-8231475213435), '-8231.5B');
+    expect(Utils().formatNumber(0, 10, 0), '0');
+    expect(Utils().formatNumber(0, 10, -0), '0');
+    expect(Utils().formatNumber(0, 10, -0.01), '0');
+    expect(Utils().formatNumber(0, 10, 0.01), '0');
+    expect(Utils().formatNumber(0, 10, -0.1), '-0.1');
+    expect(Utils().formatNumber(0, 10, 423), '423');
+    expect(Utils().formatNumber(0, 10, -423), '-423');
+    expect(Utils().formatNumber(0, 10, 1000), '1K');
+    expect(Utils().formatNumber(0, 10, 1234), '1.2K');
+    expect(Utils().formatNumber(0, 10, 10000), '10K');
+    expect(Utils().formatNumber(0, 10, 41234), '41.2K');
+    expect(Utils().formatNumber(0, 10, 82349), '82.3K');
+    expect(Utils().formatNumber(0, 10, 82350), '82.3K');
+    expect(Utils().formatNumber(0, 10, 82351), '82.4K');
+    expect(Utils().formatNumber(0, 10, -82351), '-82.4K');
+    expect(Utils().formatNumber(0, 10, 100000), '100K');
+    expect(Utils().formatNumber(0, 10, 101000), '101K');
+    expect(Utils().formatNumber(0, 10, 2345123), '2.3M');
+    expect(Utils().formatNumber(0, 10, 2352123), '2.4M');
+    expect(Utils().formatNumber(0, 10, -2352123), '-2.4M');
+    expect(Utils().formatNumber(0, 10, 521000000), '521M');
+    expect(Utils().formatNumber(0, 10, 4324512345), '4.3B');
+    expect(Utils().formatNumber(0, 10, 4000000000), '4B');
+    expect(Utils().formatNumber(0, 10, -4000000000), '-4B');
+    expect(Utils().formatNumber(0, 10, 823147521343), '823.1B');
+    expect(Utils().formatNumber(0, 10, 8231475213435), '8231.5B');
+    expect(Utils().formatNumber(0, 10, -8231475213435), '-8231.5B');
   });
 
   group('test getThemeAwareTextStyle', () {
-    test('test 1', () {
-      final mockBuildContext = MockBuildContext();
-      const defaultTextStyle = DefaultTextStyle.fallback();
+    testWidgets('test 1', (WidgetTester tester) async {
+      const style = TextStyle(color: Colors.brown);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: DefaultTextStyle(
+              style: style,
+              child: Container(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final context = tester.element(find.byType(Container));
 
-      var callCount = 0;
-      when(mockBuildContext.dependOnInheritedWidgetOfExactType())
-          .thenAnswer((realInvocation) {
-        if (callCount == 0) {
-          callCount++;
-          return defaultTextStyle;
-        } else {
-          return MediaQuery(
-            data: const MediaQueryData(),
-            child: Container(),
-          );
-        }
-      });
       expect(
-        Utils().getThemeAwareTextStyle(mockBuildContext, null),
-        defaultTextStyle.style,
+        Utils().getThemeAwareTextStyle(context, style),
+        style,
       );
     });
 
-    test('test 2', () {
-      final mockBuildContext = MockBuildContext();
-      const defaultTextStyle = DefaultTextStyle.fallback();
+    testWidgets('test 2', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MediaQuery(
+              data: const MediaQueryData(boldText: true),
+              child: Container(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final context = tester.element(find.byType(Container));
 
-      var callCount = 0;
-      when(mockBuildContext.dependOnInheritedWidgetOfExactType())
-          .thenAnswer((realInvocation) {
-        if (callCount == 0) {
-          callCount++;
-          return defaultTextStyle;
-        } else {
-          return MediaQuery(
-            data: const MediaQueryData(boldText: true),
-            child: Container(),
-          );
-        }
-      });
       expect(
         Utils()
             .getThemeAwareTextStyle(
-              mockBuildContext,
+              context,
               MockData.textStyle1,
             )
             .fontWeight,

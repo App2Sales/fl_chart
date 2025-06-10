@@ -15,39 +15,41 @@ import 'bar_chart_renderer_test.mocks.dart';
 void main() {
   group('BarChartRenderer', () {
     final data = BarChartData(
-      titlesData: FlTitlesData(
+      titlesData: const FlTitlesData(
         leftTitles: AxisTitles(
           sideTitles: SideTitles(reservedSize: 20, showTitles: true),
         ),
         rightTitles: AxisTitles(
           sideTitles: SideTitles(reservedSize: 64, showTitles: true),
         ),
-        topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        topTitles: AxisTitles(),
+        bottomTitles: AxisTitles(),
       ),
     );
 
     final targetData = BarChartData(
-      titlesData: FlTitlesData(
+      titlesData: const FlTitlesData(
         leftTitles: AxisTitles(
           sideTitles: SideTitles(reservedSize: 8, showTitles: true),
         ),
         rightTitles: AxisTitles(
           sideTitles: SideTitles(reservedSize: 20, showTitles: true),
         ),
-        topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        topTitles: AxisTitles(),
+        bottomTitles: AxisTitles(),
       ),
     );
 
-    const textScale = 4.0;
+    const textScaler = TextScaler.linear(4);
 
     final mockBuildContext = MockBuildContext();
     final renderBarChart = RenderBarChart(
       mockBuildContext,
       data,
       targetData,
-      textScale,
+      textScaler,
+      null,
+      canBeScaled: false,
     );
 
     final mockPainter = MockBarChartPainter();
@@ -63,10 +65,10 @@ void main() {
       expect(renderBarChart.data == data, true);
       expect(renderBarChart.data == targetData, false);
       expect(renderBarChart.targetData == targetData, true);
-      expect(renderBarChart.textScale == textScale, true);
+      expect(renderBarChart.textScaler == textScaler, true);
       expect(renderBarChart.paintHolder.data == data, true);
       expect(renderBarChart.paintHolder.targetData == targetData, true);
-      expect(renderBarChart.paintHolder.textScale == textScale, true);
+      expect(renderBarChart.paintHolder.textScaler == textScaler, true);
     });
 
     test('test 2 check paint function', () {
@@ -83,7 +85,7 @@ void main() {
       final paintHolder = result.captured[1] as PaintHolder;
       expect(paintHolder.data, data);
       expect(paintHolder.targetData, targetData);
-      expect(paintHolder.textScale, textScale);
+      expect(paintHolder.textScaler, textScaler);
 
       verify(mockCanvas.restore()).called(1);
     });
@@ -99,26 +101,68 @@ void main() {
         });
         return MockData.barTouchedSpot;
       });
+
+      when(mockPainter.getChartCoordinateFromPixel(any, any, any))
+          .thenAnswer((_) => const Offset(10, 10));
+
       final touchResponse =
           renderBarChart.getResponseAtLocation(MockData.offset1);
       expect(touchResponse.spot, MockData.barTouchedSpot);
+      expect(touchResponse.touchChartCoordinate, const Offset(10, 10));
       expect(results[0]['local_position'] as Offset, MockData.offset1);
       expect(results[0]['size'] as Size, mockSize);
       final paintHolder = results[0]['paint_holder'] as PaintHolder;
       expect(paintHolder.data, data);
       expect(paintHolder.targetData, targetData);
-      expect(paintHolder.textScale, textScale);
+      expect(paintHolder.textScaler, textScaler);
     });
 
     test('test 4 check setters', () {
       renderBarChart
         ..data = targetData
         ..targetData = data
-        ..textScale = 22;
+        ..textScaler = const TextScaler.linear(22);
 
       expect(renderBarChart.data, targetData);
       expect(renderBarChart.targetData, data);
-      expect(renderBarChart.textScale, 22);
+      expect(renderBarChart.textScaler, const TextScaler.linear(22));
+    });
+
+    test('passes chart virtual rect to paint holder', () {
+      final rect1 = Offset.zero & const Size(100, 100);
+      final renderBarChart = RenderBarChart(
+        mockBuildContext,
+        data,
+        targetData,
+        textScaler,
+        null,
+        canBeScaled: false,
+      );
+
+      expect(renderBarChart.chartVirtualRect, isNull);
+      expect(renderBarChart.paintHolder.chartVirtualRect, isNull);
+
+      renderBarChart.chartVirtualRect = rect1;
+
+      expect(renderBarChart.chartVirtualRect, rect1);
+      expect(renderBarChart.paintHolder.chartVirtualRect, rect1);
+    });
+
+    test('uses canBeScaled', () {
+      final renderBarChart = RenderBarChart(
+        mockBuildContext,
+        data,
+        targetData,
+        textScaler,
+        null,
+        canBeScaled: false,
+      );
+
+      expect(renderBarChart.canBeScaled, false);
+
+      renderBarChart.canBeScaled = true;
+
+      expect(renderBarChart.canBeScaled, true);
     });
   });
 }

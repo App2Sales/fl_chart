@@ -20,14 +20,16 @@ void main() {
 
     final targetData = ScatterChartData(scatterSpots: [MockData.scatterSpot3]);
 
-    const textScale = 4.0;
+    const textScaler = TextScaler.linear(4);
 
     final mockBuildContext = MockBuildContext();
     final renderScatterChart = RenderScatterChart(
       mockBuildContext,
       data,
       targetData,
-      textScale,
+      textScaler,
+      null,
+      canBeScaled: false,
     );
 
     final mockPainter = MockScatterChartPainter();
@@ -43,10 +45,10 @@ void main() {
       expect(renderScatterChart.data == data, true);
       expect(renderScatterChart.data == targetData, false);
       expect(renderScatterChart.targetData == targetData, true);
-      expect(renderScatterChart.textScale == textScale, true);
+      expect(renderScatterChart.textScaler == textScaler, true);
       expect(renderScatterChart.paintHolder.data == data, true);
       expect(renderScatterChart.paintHolder.targetData == targetData, true);
-      expect(renderScatterChart.paintHolder.textScale == textScale, true);
+      expect(renderScatterChart.paintHolder.textScaler == textScaler, true);
     });
 
     test('test 2 check paint function', () {
@@ -63,7 +65,7 @@ void main() {
       final paintHolder = result.captured[1] as PaintHolder;
       expect(paintHolder.data, data);
       expect(paintHolder.targetData, targetData);
-      expect(paintHolder.textScale, textScale);
+      expect(paintHolder.textScaler, textScaler);
 
       verify(mockCanvas.restore()).called(1);
     });
@@ -79,26 +81,66 @@ void main() {
         });
         return MockData.scatterTouchedSpot;
       });
+      when(mockPainter.getChartCoordinateFromPixel(any, any, any))
+          .thenAnswer((_) => const Offset(10, 10));
       final touchResponse =
           renderScatterChart.getResponseAtLocation(MockData.offset1);
       expect(touchResponse.touchedSpot, MockData.scatterTouchedSpot);
+      expect(touchResponse.touchChartCoordinate, const Offset(10, 10));
       expect(results[0]['local_position'] as Offset, MockData.offset1);
       expect(results[0]['size'] as Size, mockSize);
       final paintHolder = results[0]['paint_holder'] as PaintHolder;
       expect(paintHolder.data, data);
       expect(paintHolder.targetData, targetData);
-      expect(paintHolder.textScale, textScale);
+      expect(paintHolder.textScaler, textScaler);
     });
 
     test('test 4 check setters', () {
       renderScatterChart
         ..data = targetData
         ..targetData = data
-        ..textScale = 22;
+        ..textScaler = const TextScaler.linear(22);
 
       expect(renderScatterChart.data, targetData);
       expect(renderScatterChart.targetData, data);
-      expect(renderScatterChart.textScale, 22);
+      expect(renderScatterChart.textScaler, const TextScaler.linear(22));
+    });
+
+    test('passes chart virtual rect to paint holder', () {
+      final rect1 = Offset.zero & const Size(100, 100);
+      final renderScatterChart = RenderScatterChart(
+        mockBuildContext,
+        data,
+        targetData,
+        textScaler,
+        null,
+        canBeScaled: false,
+      );
+
+      expect(renderScatterChart.chartVirtualRect, isNull);
+      expect(renderScatterChart.paintHolder.chartVirtualRect, isNull);
+
+      renderScatterChart.chartVirtualRect = rect1;
+
+      expect(renderScatterChart.chartVirtualRect, rect1);
+      expect(renderScatterChart.paintHolder.chartVirtualRect, rect1);
+    });
+
+    test('uses canBeScaled', () {
+      final renderScatterChart = RenderScatterChart(
+        mockBuildContext,
+        data,
+        targetData,
+        textScaler,
+        null,
+        canBeScaled: false,
+      );
+
+      expect(renderScatterChart.canBeScaled, false);
+
+      renderScatterChart.canBeScaled = true;
+
+      expect(renderScatterChart.canBeScaled, true);
     });
   });
 }

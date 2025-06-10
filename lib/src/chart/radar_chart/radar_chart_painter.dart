@@ -1,4 +1,4 @@
-import 'dart:math' show pi, cos, sin, min;
+import 'dart:math' show cos, min, pi, sin;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:fl_chart/src/chart/base/base_chart/base_chart_painter.dart';
@@ -69,6 +69,71 @@ class RadarChartPainter extends BaseChartPainter<RadarChartData> {
   }
 
   @visibleForTesting
+  double getDefaultChartCenterValue() => 0;
+
+  double getChartCenterValue(RadarChartData data) {
+    final dataSetMaxValue = data.maxEntry.value;
+    final dataSetMinValue = data.minEntry.value;
+
+    if (data.isMinValueAtCenter) {
+      return dataSetMinValue;
+    }
+
+    final tickSpace = getSpaceBetweenTicks(data);
+    final centerValue = dataSetMinValue - tickSpace;
+
+    return dataSetMaxValue == dataSetMinValue
+        ? getDefaultChartCenterValue()
+        : centerValue;
+  }
+
+  @visibleForTesting
+  double getScaledPoint(RadarEntry point, double radius, RadarChartData data) {
+    final centerValue = getChartCenterValue(data);
+    final distanceFromPointToCenter = point.value - centerValue;
+    final distanceFromMaxToCenter = data.maxEntry.value - centerValue;
+
+    if (distanceFromMaxToCenter == 0) {
+      return radius * distanceFromPointToCenter / 0.001;
+    }
+
+    return radius * distanceFromPointToCenter / distanceFromMaxToCenter;
+  }
+
+  @visibleForTesting
+  double getFirstTickValue(RadarChartData data) {
+    final defaultCenterValue = getDefaultChartCenterValue();
+    if (data.isMinValueAtCenter) {
+      return defaultCenterValue;
+    }
+
+    final dataSetMaxValue = data.maxEntry.value;
+    final dataSetMinValue = data.minEntry.value;
+
+    return dataSetMaxValue == dataSetMinValue
+        ? (dataSetMaxValue - defaultCenterValue) / (data.tickCount + 1) +
+            defaultCenterValue
+        : dataSetMinValue;
+  }
+
+  @visibleForTesting
+  double getSpaceBetweenTicks(RadarChartData data) {
+    final dataSetMaxValue = data.maxEntry.value;
+    final dataSetMinValue = data.minEntry.value;
+
+    if (data.isMinValueAtCenter) {
+      return (dataSetMaxValue - dataSetMinValue) / (data.tickCount);
+    }
+
+    final defaultCenterValue = getDefaultChartCenterValue();
+    final tickSpace = (dataSetMaxValue - dataSetMinValue) / data.tickCount;
+    final defaultTickSpace =
+        (dataSetMaxValue - defaultCenterValue) / (data.tickCount + 1);
+
+    return dataSetMaxValue == dataSetMinValue ? defaultTickSpace : tickSpace;
+  }
+
+  @visibleForTesting
   void drawTicks(
     BuildContext context,
     CanvasWrapper canvasWrapper,
@@ -109,18 +174,18 @@ class RadarChartPainter extends BaseChartPainter<RadarChartData> {
         ..drawPath(path, _borderPaint);
     }
 
-    final dataSetMaxValue = data.maxEntry.value;
-    final dataSetMinValue = data.minEntry.value;
-    final tickSpace = (dataSetMaxValue - dataSetMinValue) / data.tickCount;
+    final tickSpace = getSpaceBetweenTicks(data);
     final ticks = <double>[];
-    var tickValue = dataSetMinValue;
+    var tickValue = getFirstTickValue(data);
 
     for (var i = 0; i <= data.tickCount; i++) {
       ticks.add(tickValue);
       tickValue += tickSpace;
     }
 
-    final tickDistance = radius / (ticks.length);
+    final tickDistance = data.isMinValueAtCenter
+        ? radius / (ticks.length - 1)
+        : radius / ticks.length;
 
     _tickPaint
       ..color = data.tickBorderData.color
@@ -129,7 +194,8 @@ class RadarChartPainter extends BaseChartPainter<RadarChartData> {
     /// draw radar ticks
     ticks.sublist(0, ticks.length - 1).asMap().forEach(
       (index, tick) {
-        final tickRadius = tickDistance * (index + 1);
+        final tickRadius =
+            tickDistance * (index + (data.isMinValueAtCenter ? 0 : 1));
         if (data.radarShape == RadarShape.circle) {
           canvasWrapper.drawCircle(centerOffset, tickRadius, _tickPaint);
         } else {
@@ -225,17 +291,20 @@ class RadarChartPainter extends BaseChartPainter<RadarChartData> {
     _titleTextPaint
       ..textAlign = TextAlign.center
       ..textDirection = TextDirection.ltr
-      ..textScaleFactor = holder.textScale;
+      ..textScaler = holder.textScaler;
 
     for (var index = 0; index < data.titleCount; index++) {
       final baseTitleAngle = Utils().degrees(diffAngle * index);
       final title = data.getTitle!(index, baseTitleAngle);
-      final span = TextSpan(text: title.text, style: style);
+      final span =
+          TextSpan(text: title.text, children: title.children, style: style);
       _titleTextPaint
         ..text = span
         ..layout();
       final angle = diffAngle * index - pi / 2;
-      final threshold = 1.0 + data.titlePositionPercentageOffset;
+      final threshold = 1.0 +
+          (title.positionPercentageOffset ??
+              data.titlePositionPercentageOffset);
       final titleX = centerX +
           cos(angle) * (radius * threshold + (_titleTextPaint.height / 2));
       final titleY = centerY +
@@ -277,12 +346,28 @@ class RadarChartPainter extends BaseChartPainter<RadarChartData> {
     final data = holder.data;
     // we will use dataSetsPosition to draw the graphs
     dataSetsPosition ??= calculateDataSetsPosition(canvasWrapper.size, holder);
+
+    final size = canvasWrapper.size;
+    final centerX = radarCenterX(size);
+    final centerY = radarCenterY(size);
+    final centerOffset = Offset(centerX, centerY);
+    final radius = radarRadius(size);
+
     dataSetsPosition!.asMap().forEach((index, dataSetOffset) {
       final graph = data.dataSets[index];
-      _graphPaint
-        ..color = graph.fillColor
-        ..style = PaintingStyle.fill;
-
+      // if fillGradient exists
+      if (graph.fillGradient != null) {
+        // Create the shader
+        final rect = Rect.fromCircle(center: centerOffset, radius: radius);
+        _graphPaint
+          ..shader = graph.fillGradient!.createShader(rect)
+          ..style = PaintingStyle.fill;
+      } else {
+        // else solid fill color
+        _graphPaint
+          ..color = graph.fillColor
+          ..style = PaintingStyle.fill;
+      }
       _graphBorderPaint
         ..color = graph.borderColor
         ..style = PaintingStyle.stroke
@@ -375,7 +460,6 @@ class RadarChartPainter extends BaseChartPainter<RadarChartData> {
     final centerY = radarCenterY(viewSize);
     final radius = radarRadius(viewSize);
 
-    final scale = radius / data.maxEntry.value;
     final angle = (2 * pi) / data.titleCount;
 
     final dataSetsPosition = List<RadarDataSetsPosition>.filled(
@@ -392,7 +476,7 @@ class RadarChartPainter extends BaseChartPainter<RadarChartData> {
 
         final xAngle = cos(angle * j - pi / 2);
         final yAngle = sin(angle * j - pi / 2);
-        final scaledPoint = scale * point.value;
+        final scaledPoint = getScaledPoint(point, radius, data);
 
         final entryOffset = Offset(
           centerX + scaledPoint * xAngle,
@@ -410,5 +494,6 @@ class RadarChartPainter extends BaseChartPainter<RadarChartData> {
 
 class RadarDataSetsPosition {
   const RadarDataSetsPosition(this.entriesOffset);
+
   final List<Offset> entriesOffset;
 }

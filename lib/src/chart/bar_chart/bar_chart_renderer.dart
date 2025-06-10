@@ -9,17 +9,27 @@ import 'package:flutter/cupertino.dart';
 
 /// Low level BarChart Widget.
 class BarChartLeaf extends LeafRenderObjectWidget {
-  const BarChartLeaf({super.key, required this.data, required this.targetData});
+  const BarChartLeaf({
+    super.key,
+    required this.data,
+    required this.targetData,
+    required this.canBeScaled,
+    required this.chartVirtualRect,
+  });
 
   final BarChartData data;
   final BarChartData targetData;
+  final Rect? chartVirtualRect;
+  final bool canBeScaled;
 
   @override
   RenderBarChart createRenderObject(BuildContext context) => RenderBarChart(
         context,
         data,
         targetData,
-        MediaQuery.of(context).textScaleFactor,
+        MediaQuery.of(context).textScaler,
+        chartVirtualRect,
+        canBeScaled: canBeScaled,
       );
 
   @override
@@ -27,8 +37,10 @@ class BarChartLeaf extends LeafRenderObjectWidget {
     renderObject
       ..data = data
       ..targetData = targetData
-      ..textScale = MediaQuery.of(context).textScaleFactor
-      ..buildContext = context;
+      ..textScaler = MediaQuery.of(context).textScaler
+      ..buildContext = context
+      ..chartVirtualRect = chartVirtualRect
+      ..canBeScaled = canBeScaled;
   }
 }
 // coverage:ignore-end
@@ -39,11 +51,14 @@ class RenderBarChart extends RenderBaseChart<BarTouchResponse> {
     BuildContext context,
     BarChartData data,
     BarChartData targetData,
-    double textScale,
-  )   : _data = data,
+    TextScaler textScaler,
+    Rect? chartVirtualRect, {
+    required bool canBeScaled,
+  })  : _data = data,
         _targetData = targetData,
-        _textScale = textScale,
-        super(targetData.barTouchData, context);
+        _textScaler = textScaler,
+        _chartVirtualRect = chartVirtualRect,
+        super(targetData.barTouchData, context, canBeScaled: canBeScaled);
 
   BarChartData get data => _data;
   BarChartData _data;
@@ -64,12 +79,21 @@ class RenderBarChart extends RenderBaseChart<BarTouchResponse> {
     markNeedsPaint();
   }
 
-  double get textScale => _textScale;
-  double _textScale;
+  TextScaler get textScaler => _textScaler;
+  TextScaler _textScaler;
 
-  set textScale(double value) {
-    if (_textScale == value) return;
-    _textScale = value;
+  set textScaler(TextScaler value) {
+    if (_textScaler == value) return;
+    _textScaler = value;
+    markNeedsPaint();
+  }
+
+  Rect? get chartVirtualRect => _chartVirtualRect;
+  Rect? _chartVirtualRect;
+
+  set chartVirtualRect(Rect? value) {
+    if (_chartVirtualRect == value) return;
+    _chartVirtualRect = value;
     markNeedsPaint();
   }
 
@@ -80,9 +104,8 @@ class RenderBarChart extends RenderBaseChart<BarTouchResponse> {
   @visibleForTesting
   BarChartPainter painter = BarChartPainter();
 
-  PaintHolder<BarChartData> get paintHolder {
-    return PaintHolder(data, targetData, textScale);
-  }
+  PaintHolder<BarChartData> get paintHolder =>
+      PaintHolder(data, targetData, textScaler, chartVirtualRect);
 
   @override
   void paint(PaintingContext context, Offset offset) {
@@ -99,11 +122,19 @@ class RenderBarChart extends RenderBaseChart<BarTouchResponse> {
 
   @override
   BarTouchResponse getResponseAtLocation(Offset localPosition) {
-    final touchedSpot = painter.handleTouch(
-      localPosition,
-      mockTestSize ?? size,
-      paintHolder,
+    final chartSize = mockTestSize ?? size;
+    return BarTouchResponse(
+      touchLocation: localPosition,
+      touchChartCoordinate: painter.getChartCoordinateFromPixel(
+        localPosition,
+        chartSize,
+        paintHolder,
+      ),
+      spot: painter.handleTouch(
+        localPosition,
+        chartSize,
+        paintHolder,
+      ),
     );
-    return BarTouchResponse(touchedSpot);
   }
 }

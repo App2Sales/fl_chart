@@ -11,10 +11,22 @@ abstract class RenderBaseChart<R extends BaseTouchResponse> extends RenderBox
     implements MouseTrackerAnnotation {
   /// We use [FlTouchData] to retrieve [FlTouchData.touchCallback] and [FlTouchData.mouseCursorResolver]
   /// to invoke them when touch happens.
-  RenderBaseChart(FlTouchData<R>? touchData, BuildContext context)
-      : _buildContext = context {
+  RenderBaseChart(
+    FlTouchData<R>? touchData,
+    BuildContext context, {
+    required bool canBeScaled,
+  })  : _canBeScaled = canBeScaled,
+        _buildContext = context {
     updateBaseTouchData(touchData);
     initGestureRecognizers();
+  }
+
+  bool get canBeScaled => _canBeScaled;
+  bool _canBeScaled;
+  set canBeScaled(bool value) {
+    if (_canBeScaled == value) return;
+    _canBeScaled = value;
+    markNeedsPaint();
   }
 
   // We use buildContext to retrieve Theme data
@@ -28,28 +40,33 @@ abstract class RenderBaseChart<R extends BaseTouchResponse> extends RenderBox
   void updateBaseTouchData(FlTouchData<R>? value) {
     _touchCallback = value?.touchCallback;
     _mouseCursorResolver = value?.mouseCursorResolver;
+    _longPressDuration = value?.longPressDuration;
   }
 
   BaseTouchCallback<R>? _touchCallback;
   MouseCursorResolver<R>? _mouseCursorResolver;
+  Duration? _longPressDuration;
 
   MouseCursor _latestMouseCursor = MouseCursor.defer;
 
   late bool _validForMouseTracker;
 
   /// Recognizes pan gestures, such as onDown, onStart, onUpdate, onCancel, ...
-  late PanGestureRecognizer _panGestureRecognizer;
+  @visibleForTesting
+  late PanGestureRecognizer panGestureRecognizer;
 
   /// Recognizes tap gestures, such as onTapDown, onTapCancel and onTapUp
-  late TapGestureRecognizer _tapGestureRecognizer;
+  @visibleForTesting
+  late TapGestureRecognizer tapGestureRecognizer;
 
   /// Recognizes longPress gestures, such as onLongPressStart, onLongPressMoveUpdate and onLongPressEnd
-  late LongPressGestureRecognizer _longPressGestureRecognizer;
+  @visibleForTesting
+  late LongPressGestureRecognizer longPressGestureRecognizer;
 
   /// Initializes our recognizers and implement their callbacks.
   void initGestureRecognizers() {
-    _panGestureRecognizer = PanGestureRecognizer();
-    _panGestureRecognizer
+    panGestureRecognizer = PanGestureRecognizer();
+    panGestureRecognizer
       ..onDown = (dragDownDetails) {
         _notifyTouchEvent(FlPanDownEvent(dragDownDetails));
       }
@@ -60,26 +77,27 @@ abstract class RenderBaseChart<R extends BaseTouchResponse> extends RenderBox
         _notifyTouchEvent(FlPanUpdateEvent(dragUpdateDetails));
       }
       ..onCancel = () {
-        _notifyTouchEvent(FlPanCancelEvent());
+        _notifyTouchEvent(const FlPanCancelEvent());
       }
       ..onEnd = (dragEndDetails) {
         _notifyTouchEvent(FlPanEndEvent(dragEndDetails));
       };
 
-    _tapGestureRecognizer = TapGestureRecognizer();
-    _tapGestureRecognizer
+    tapGestureRecognizer = TapGestureRecognizer();
+    tapGestureRecognizer
       ..onTapDown = (tapDownDetails) {
         _notifyTouchEvent(FlTapDownEvent(tapDownDetails));
       }
       ..onTapCancel = () {
-        _notifyTouchEvent(FlTapCancelEvent());
+        _notifyTouchEvent(const FlTapCancelEvent());
       }
       ..onTapUp = (tapUpDetails) {
         _notifyTouchEvent(FlTapUpEvent(tapUpDetails));
       };
 
-    _longPressGestureRecognizer = LongPressGestureRecognizer();
-    _longPressGestureRecognizer
+    longPressGestureRecognizer =
+        LongPressGestureRecognizer(duration: _longPressDuration);
+    longPressGestureRecognizer
       ..onLongPressStart = (longPressStartDetails) {
         _notifyTouchEvent(FlLongPressStart(longPressStartDetails));
       }
@@ -119,9 +137,11 @@ abstract class RenderBaseChart<R extends BaseTouchResponse> extends RenderBox
       return;
     }
     if (event is PointerDownEvent) {
-      _longPressGestureRecognizer.addPointer(event);
-      _tapGestureRecognizer.addPointer(event);
-      _panGestureRecognizer.addPointer(event);
+      longPressGestureRecognizer.addPointer(event);
+      tapGestureRecognizer.addPointer(event);
+      if (!canBeScaled) {
+        panGestureRecognizer.addPointer(event);
+      }
     } else if (event is PointerHoverEvent) {
       _notifyTouchEvent(FlPointerHoverEvent(event));
     }

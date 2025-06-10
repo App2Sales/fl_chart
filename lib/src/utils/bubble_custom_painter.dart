@@ -5,15 +5,18 @@ import 'package:flutter/material.dart';
 class BubbleCustomPainter {
   BubbleCustomPainter({
     this.parentForcedSize,
-    this.borderRadius = 12,
+    BorderRadius? borderRadius,
     this.arrowHeight = 10,
     this.arrowWidth = 10,
     this.arrowPositionPercent = 0.5,
-  });
+  }) {
+    this.borderRadius = borderRadius ?? BorderRadius.circular(12);
+  }
 
+  late final BorderRadius borderRadius;
+  
   final Size? parentForcedSize;
 
-  final double borderRadius;
   final double arrowHeight;
   final double arrowWidth;
 
@@ -26,14 +29,14 @@ class BubbleCustomPainter {
   Path generatePath({required Rect rect}) {
     final path = Path();
     
-    final topLeftDiameter = max(borderRadius, 0);
-    final topRightDiameter = max(borderRadius, 0);
+    final topLeftDiameter = max(borderRadius.topLeft.x, 0);
+    final topRightDiameter = max(borderRadius.topRight.x, 0);
     final bottomLeftDiameter = max(
-      arrowPositionPercent == 0.0 ? 0 : borderRadius,
+      arrowPositionPercent == 0.0 ? 0 : borderRadius.bottomLeft.x,
       0,
     );
     final bottomRightDiameter = max(
-      arrowPositionPercent == 1.0 ? 0 : borderRadius,
+      arrowPositionPercent == 1.0 ? 0 : borderRadius.bottomRight.x,
       0,
     );
 

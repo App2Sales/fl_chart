@@ -131,6 +131,7 @@ void main() {
       expect(lineTouchData1 == lineTouchData5, false);
       expect(lineTouchData1 == lineTouchData6, false);
       expect(lineTouchData1 == lineTouchData7, false);
+      expect(lineTouchData1 == lineTouchData8, false);
     });
 
     test('LineTouchTooltipData equality test', () {
@@ -202,6 +203,21 @@ void main() {
       expect(lineChartData1 == lineChartData18, false);
       expect(lineChartData1 == lineChartData19, false);
       expect(lineChartData1 == lineChartData20, false);
+      expect(lineChartData1 == lineChartData21, false);
+      expect(
+        lineChartData21 ==
+            lineChartData21.copyWith(
+              rotationQuarterTurns: 2,
+            ),
+        false,
+      );
+      expect(
+        lineChartData21 ==
+            lineChartData21.copyWith(
+              rotationQuarterTurns: 1,
+            ),
+        true,
+      );
     });
   });
 }

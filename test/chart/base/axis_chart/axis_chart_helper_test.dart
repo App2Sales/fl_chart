@@ -1,3 +1,4 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:fl_chart/src/chart/base/axis_chart/axis_chart_helper.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -75,7 +76,7 @@ void main() {
       expect(results[4], 10);
     });
 
-    test('test 4', () {
+    test('test 5', () {
       final results = <double>[];
       final axisValues = AxisChartHelper().iterateThroughAxis(
         min: 0,
@@ -94,7 +95,7 @@ void main() {
       expect(results[2], 9);
     });
 
-    test('test 4', () {
+    test('test 6', () {
       final results = <double>[];
       final axisValues = AxisChartHelper().iterateThroughAxis(
         min: 35,
@@ -110,6 +111,112 @@ void main() {
       expect(results[1], 50);
       expect(results[2], 100);
       expect(results[3], 130);
+    });
+
+    test('test 7', () {
+      final results = <double>[];
+      final axisValues = AxisChartHelper().iterateThroughAxis(
+        min: 5,
+        max: 35,
+        interval: 10,
+        baseLine: 5,
+      );
+      for (final axisValue in axisValues) {
+        results.add(axisValue);
+      }
+      expect(results.length, 4);
+      expect(results[0], 5);
+      expect(results[1], 15);
+      expect(results[2], 25);
+      expect(results[3], 35);
+    });
+  });
+
+  group('calcFitInsideOffset', () {
+    group('not overflowed', () {
+      test('vertical axis', () {
+        const result = Offset.zero;
+
+        final offset = AxisChartHelper().calcFitInsideOffset(
+          axisSide: AxisSide.left,
+          childSize: 10,
+          parentAxisSize: 100,
+          axisPosition: 20,
+          distanceFromEdge: 0,
+        );
+
+        expect(offset, result);
+      });
+
+      test('horizontal axis', () {
+        const result = Offset.zero;
+
+        final offset = AxisChartHelper().calcFitInsideOffset(
+          axisSide: AxisSide.bottom,
+          childSize: 10,
+          parentAxisSize: 100,
+          axisPosition: 20,
+          distanceFromEdge: 0,
+        );
+
+        expect(offset, result);
+      });
+    });
+
+    group('overflowed', () {
+      test('vertical axis at start', () {
+        const result = Offset(0, 5);
+
+        final offset = AxisChartHelper().calcFitInsideOffset(
+          axisSide: AxisSide.left,
+          childSize: 10,
+          parentAxisSize: 100,
+          axisPosition: 0,
+          distanceFromEdge: 0,
+        );
+
+        expect(offset, result);
+      });
+      test('vertical axis at end', () {
+        const result = Offset(0, -5);
+
+        final offset = AxisChartHelper().calcFitInsideOffset(
+          axisSide: AxisSide.left,
+          childSize: 10,
+          parentAxisSize: 100,
+          axisPosition: 100,
+          distanceFromEdge: 0,
+        );
+
+        expect(offset, result);
+      });
+
+      test('horizontal axis at start', () {
+        const result = Offset(5, 0);
+
+        final offset = AxisChartHelper().calcFitInsideOffset(
+          axisSide: AxisSide.bottom,
+          childSize: 10,
+          parentAxisSize: 100,
+          axisPosition: 0,
+          distanceFromEdge: 0,
+        );
+
+        expect(offset, result);
+      });
+      test('horizontal axis at end', () {
+        const result = Offset(-5, 0);
+
+        final offset = AxisChartHelper().calcFitInsideOffset(
+          axisSide: AxisSide.bottom,
+          childSize: 10,
+          parentAxisSize: 100,
+          axisPosition: 100,
+          distanceFromEdge: 0,
+        );
+
+        expect(offset, result);
+      });
     });
   });
 }

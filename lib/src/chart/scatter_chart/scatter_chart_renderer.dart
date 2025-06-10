@@ -13,10 +13,14 @@ class ScatterChartLeaf extends LeafRenderObjectWidget {
     super.key,
     required this.data,
     required this.targetData,
+    required this.chartVirtualRect,
+    required this.canBeScaled,
   });
 
   final ScatterChartData data;
   final ScatterChartData targetData;
+  final Rect? chartVirtualRect;
+  final bool canBeScaled;
 
   @override
   RenderScatterChart createRenderObject(BuildContext context) =>
@@ -24,7 +28,9 @@ class ScatterChartLeaf extends LeafRenderObjectWidget {
         context,
         data,
         targetData,
-        MediaQuery.of(context).textScaleFactor,
+        MediaQuery.of(context).textScaler,
+        chartVirtualRect,
+        canBeScaled: canBeScaled,
       );
 
   @override
@@ -35,8 +41,10 @@ class ScatterChartLeaf extends LeafRenderObjectWidget {
     renderObject
       ..data = data
       ..targetData = targetData
-      ..textScale = MediaQuery.of(context).textScaleFactor
-      ..buildContext = context;
+      ..textScaler = MediaQuery.of(context).textScaler
+      ..buildContext = context
+      ..chartVirtualRect = chartVirtualRect
+      ..canBeScaled = canBeScaled;
   }
 }
 // coverage:ignore-end
@@ -47,11 +55,14 @@ class RenderScatterChart extends RenderBaseChart<ScatterTouchResponse> {
     BuildContext context,
     ScatterChartData data,
     ScatterChartData targetData,
-    double textScale,
-  )   : _data = data,
+    TextScaler textScaler,
+    Rect? chartVirtualRect, {
+    required bool canBeScaled,
+  })  : _data = data,
         _targetData = targetData,
-        _textScale = textScale,
-        super(targetData.scatterTouchData, context);
+        _textScaler = textScaler,
+        _chartVirtualRect = chartVirtualRect,
+        super(targetData.scatterTouchData, context, canBeScaled: canBeScaled);
 
   ScatterChartData get data => _data;
   ScatterChartData _data;
@@ -72,12 +83,21 @@ class RenderScatterChart extends RenderBaseChart<ScatterTouchResponse> {
     markNeedsPaint();
   }
 
-  double get textScale => _textScale;
-  double _textScale;
+  TextScaler get textScaler => _textScaler;
+  TextScaler _textScaler;
 
-  set textScale(double value) {
-    if (_textScale == value) return;
-    _textScale = value;
+  set textScaler(TextScaler value) {
+    if (_textScaler == value) return;
+    _textScaler = value;
+    markNeedsPaint();
+  }
+
+  Rect? get chartVirtualRect => _chartVirtualRect;
+  Rect? _chartVirtualRect;
+
+  set chartVirtualRect(Rect? value) {
+    if (_chartVirtualRect == value) return;
+    _chartVirtualRect = value;
     markNeedsPaint();
   }
 
@@ -88,9 +108,8 @@ class RenderScatterChart extends RenderBaseChart<ScatterTouchResponse> {
   @visibleForTesting
   ScatterChartPainter painter = ScatterChartPainter();
 
-  PaintHolder<ScatterChartData> get paintHolder {
-    return PaintHolder(data, targetData, textScale);
-  }
+  PaintHolder<ScatterChartData> get paintHolder =>
+      PaintHolder(data, targetData, textScaler, chartVirtualRect);
 
   @override
   void paint(PaintingContext context, Offset offset) {
@@ -107,11 +126,19 @@ class RenderScatterChart extends RenderBaseChart<ScatterTouchResponse> {
 
   @override
   ScatterTouchResponse getResponseAtLocation(Offset localPosition) {
-    final touchedSpot = painter.handleTouch(
-      localPosition,
-      mockTestSize ?? size,
-      paintHolder,
+    final chartSize = mockTestSize ?? size;
+    return ScatterTouchResponse(
+      touchLocation: localPosition,
+      touchChartCoordinate: painter.getChartCoordinateFromPixel(
+        localPosition,
+        chartSize,
+        paintHolder,
+      ),
+      touchedSpot: painter.handleTouch(
+        localPosition,
+        chartSize,
+        paintHolder,
+      ),
     );
-    return ScatterTouchResponse(touchedSpot);
   }
 }

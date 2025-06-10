@@ -26,7 +26,7 @@ class PieChartLeaf extends MultiChildRenderObjectWidget {
         context,
         data,
         targetData,
-        MediaQuery.of(context).textScaleFactor,
+        MediaQuery.of(context).textScaler,
       );
 
   @override
@@ -34,7 +34,7 @@ class PieChartLeaf extends MultiChildRenderObjectWidget {
     renderObject
       ..data = data
       ..targetData = targetData
-      ..textScale = MediaQuery.of(context).textScaleFactor
+      ..textScaler = MediaQuery.of(context).textScaler
       ..buildContext = context;
   }
 }
@@ -50,11 +50,11 @@ class RenderPieChart extends RenderBaseChart<PieTouchResponse>
     BuildContext context,
     PieChartData data,
     PieChartData targetData,
-    double textScale,
+    TextScaler textScaler,
   )   : _data = data,
         _targetData = targetData,
-        _textScale = textScale,
-        super(targetData.pieTouchData, context);
+        _textScaler = textScaler,
+        super(targetData.pieTouchData, context, canBeScaled: false);
 
   PieChartData get data => _data;
   PieChartData _data;
@@ -77,12 +77,12 @@ class RenderPieChart extends RenderBaseChart<PieTouchResponse>
     markNeedsLayout();
   }
 
-  double get textScale => _textScale;
-  double _textScale;
+  TextScaler get textScaler => _textScaler;
+  TextScaler _textScaler;
 
-  set textScale(double value) {
-    if (_textScale == value) return;
-    _textScale = value;
+  set textScaler(TextScaler value) {
+    if (_textScaler == value) return;
+    _textScaler = value;
     markNeedsPaint();
   }
 
@@ -93,9 +93,8 @@ class RenderPieChart extends RenderBaseChart<PieTouchResponse>
   @visibleForTesting
   PieChartPainter painter = PieChartPainter();
 
-  PaintHolder<PieChartData> get paintHolder {
-    return PaintHolder(data, targetData, textScale);
-  }
+  PaintHolder<PieChartData> get paintHolder =>
+      PaintHolder(data, targetData, textScaler);
 
   @override
   void setupParentData(RenderBox child) {
@@ -130,9 +129,8 @@ class RenderPieChart extends RenderBaseChart<PieTouchResponse>
   }
 
   @override
-  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
-    return defaultHitTestChildren(result, position: position);
-  }
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
+      defaultHitTestChildren(result, position: position);
 
   @override
   void paint(PaintingContext context, Offset offset) {
@@ -145,23 +143,38 @@ class RenderPieChart extends RenderBaseChart<PieTouchResponse>
       paintHolder,
     );
     canvas.restore();
-    defaultPaint(context, offset);
+    badgeWidgetPaint(context, offset);
+  }
+
+  void badgeWidgetPaint(PaintingContext context, Offset offset) {
+    RenderObject? child = firstChild;
+    var counter = 0;
+    while (child != null) {
+      final childParentData = child.parentData! as MultiChildLayoutParentData;
+      if (data.sections[counter].value > 0) {
+        context.paintChild(child, childParentData.offset + offset);
+      }
+      child = childParentData.nextSibling;
+      counter++;
+    }
   }
 
   @override
   PieTouchResponse getResponseAtLocation(Offset localPosition) {
-    final pieSection = painter.handleTouch(
-      localPosition,
-      mockTestSize ?? size,
-      paintHolder,
+    return PieTouchResponse(
+      touchLocation: localPosition,
+      touchedSection: painter.handleTouch(
+        localPosition,
+        mockTestSize ?? size,
+        paintHolder,
+      ),
     );
-    return PieTouchResponse(pieSection);
   }
 
   @override
   void visitChildrenForSemantics(RenderObjectVisitor visitor) {
     /// It produces an error when we change the sections list, Check this issue:
-    /// https://github.com/imaNNeoFighT/fl_chart/issues/861
+    /// https://github.com/imaNNeo/fl_chart/issues/861
     ///
     /// Below is the error message:
     /// Updated layout information required for RenderSemanticsAnnotations#f3b96 NEEDS-LAYOUT NEEDS-PAINT to calculate semantics.
